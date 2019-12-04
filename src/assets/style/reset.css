@@ -30,7 +30,10 @@ body {
 	/* line-height: 1; */
 	-webkit-overflow-scrolling: touch;
 	-webkit-touch-callout: none !important;
+	-webkit-user-select: none;
 	height: 100%;
+	overflow-x: hidden;
+	   /* overflow: hidden; */
 	/* min-height: 100vh; */
 
 }

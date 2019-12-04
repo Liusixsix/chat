@@ -1,6 +1,6 @@
 import Vue from 'vue'
 import App from './App.vue'
-import router from './router.js'
+import router from './router.js'   
 import '@/assets/style/reset.css'
 import '@/utils/rem'
 import './vant.js'
