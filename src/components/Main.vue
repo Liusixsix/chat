@@ -12,12 +12,12 @@
       </div>
     </div>
 
-    <div class="content" ref="xwBody">
-      <!-- <van-pull-refresh v-model="isLoading" @refresh="onRefresh"> -->
-      <div class="chat-wrap">
-        <List :records="records"></List>
-      </div>
-      <!-- </van-pull-refresh> -->
+    <div class="content" ref="xwBody" :style="{bottom:footerH+'rem'}">
+      <van-pull-refresh v-model="isLoading" @refresh="onRefresh">
+        <div class="chat-wrap">
+          <List :records="records"></List>
+        </div>
+      </van-pull-refresh>
     </div>
     <div class="footer-wrap" :style="{height:footerH+'rem'}">
       <!-- 底部输入框 -->
@@ -26,6 +26,7 @@
           <div class="input-wrap">
             <van-field
               type="text"
+              ref="input"
               v-model="value"
               placeholder
               @focus="inputFocus"
@@ -50,11 +51,11 @@
 
         <!-- 表情 -->
         <!-- <transition name="slide-fade"> -->
-          <ul class="EXPS-wrap" v-show="isEXps">
-            <li v-for="(item,index) in EXPS" :key="index" class="exps-item">
-              <img :src="item.url" alt @click="clickEXPS($event,item.url)" />
-            </li>
-          </ul>
+        <ul class="EXPS-wrap" v-show="isEXps">
+          <li v-for="(item,index) in EXPS" :key="index" class="exps-item">
+            <img :src="item.url" alt @click="clickEXPS($event,item.url)" />
+          </li>
+        </ul>
         <!-- </transition> -->
       </div>
     </div>
@@ -66,7 +67,7 @@ import EXPS from "../static/emojis.json";
 import axios from "axios";
 import List from "./list";
 import api from "../http";
-const baseURL = 'https://icon.sleep365.cn/'
+const baseURL = "https://icon.sleep365.cn/";
 export default {
   name: "mains",
   components: {
@@ -113,13 +114,10 @@ export default {
           content: "风格啊发哇的瓦房我福娃福娃狗娃福娃福娃发发福娃福娃"
         },
         { type: 1, content: "风格啊发哇发" },
-        { type: 2, content: "风格啊发哇发fwa格啊发哇发fwa格啊发哇发fwa格啊发哇发fwa格啊发哇发fwa格啊发哇发fwafw" },
-        {
-          type: 3
-        },
         {
           type: 2,
-          content: "风格啊发哇的瓦房我福娃福娃狗娃福娃福娃发发福娃福娃"
+          content:
+            "风格啊发哇发fwa格啊发哇发fwa格啊发哇发fwa格啊发哇发fwa格啊发哇发fwa格啊发哇发fwafw"
         },
         {
           type: 2,
@@ -148,7 +146,6 @@ export default {
           this.footerH = 1.11 + 3;
         } else {
           this.footerH = 1.11;
-          
         }
       }
     }
@@ -164,6 +161,7 @@ export default {
     // 点击表情 是否显示表情列表
     showExps() {
       this.isEXps = !this.isEXps;
+      this.setIpuBlur();
       this.scrollToBottom();
     },
     // 点击某个表情发送
@@ -182,15 +180,19 @@ export default {
         let Dom = this.$refs.xwBody;
         let h = Dom.scrollHeight;
         Dom.scrollTop = h;
-        this.$toast(h);
       }, 300);
     },
     // 输入框失焦事件
     inputBlur() {
-      this.$toast("失去");
+      this.$toast("失去焦点");
+    },
+    //主动让input失去焦点 消除键盘
+    setIpuBlur() {
+      this.$refs.input.blur();
     },
     // 发送按钮
     Sendout() {
+      this.$toast("发送按钮");
       this.records.push({
         type: 2,
         content: this.value
@@ -210,33 +212,62 @@ export default {
       formdata.append("file", file.file);
       formdata.append("key", fileName);
       try {
-        let uploadToken = await api.getUploadToken({ fileName }).then(res => res.uploadToken);
+        let uploadToken = await api
+          .getUploadToken({ fileName })
+          .then(res => res.uploadToken);
         formdata.append("token", uploadToken);
-       let imgName = await axios.post("https://upload.qiniup.com", formdata, config).then(res => res.key);
-
+        let imgName = await axios
+          .post("https://upload.qiniup.com", formdata, config)
+          .then(res => res.key);
         this.records.push({
           type: 2,
-          content: `<img src="${baseURL+imgName}" alt />`
+          content: `<img src="${baseURL + imgName}" alt />`
           // content:`${baseURL+imgName}`
         });
-       
       } catch (err) {
-        Toast.success("发送失败");
+        this.$toast("发送失败");
       }
-       this.scrollToBottom()
+      this.scrollToBottom();
     },
     scrollToBottom() {
       this.$nextTick(() => {
         let Dom = this.$refs.xwBody;
         Dom.scrollTop = Dom.scrollHeight;
       });
+    },
+    iosTrouchFn(el) {
+      console.log(el)
+      //el需要滑动的元素
+      el.addEventListener("touchmove", function(e) {
+        e.isSCROLL = true;
+      });
+      document.body.addEventListener(
+        "touchmove",
+        function(e) {
+          if (!e.isSCROLL) {
+            e.preventDefault(); //阻止默认事件(上下滑动)
+          } else {
+            //需要滑动的区域
+            var top = el.scrollTop; //对象最顶端和窗口最顶端之间的距离
+            var scrollH = el.scrollHeight; //含滚动内容的元素大小
+            var offsetH = el.offsetHeight; //网页可见区域高
+            var cScroll = top + offsetH; //当前滚动的距离
+
+            //被滑动到最上方和最下方的时候
+            if (top == 0) {
+              top = 1; //0～1之间的小数会被当成0
+            } else if (cScroll === scrollH) {
+              el.scrollTop = top - 0.1;
+            }
+          }
+        },
+        { passive: false }
+      ); //passive防止阻止默认事件不生效
     }
   },
   mounted() {
-    this.$nextTick(() => {
-      // this.h = window.innerHeight;
-    });
-
+    this.$toast("3");
+  // this.iosTrouchFn( this.$refs.xwBody)
     setTimeout(() => {
       this.scrollToBottom();
     }, 500);
@@ -252,14 +283,13 @@ export default {
   display: -webkit-box;
   -webkit-box-orient: vertical;
   height: 100%;
-  height: 100%;
-  // border: 1px solid red;
-  // box-sizing: border-box;
+  width: 100%;
+  overflow-x: hidden;
 }
 .header {
   font-size: 0.36rem;
   text-align: center;
-  height: 1.54rem;
+  // height: 1.54rem;
   .header-content {
     height: 1.54rem;
     position: fixed;
@@ -273,7 +303,7 @@ export default {
     box-shadow: 0px 3px 13px 0px rgba(212, 229, 255, 0.21);
     color: #333333;
     position: relative;
-    z-index: 99;
+    z-index: 9;
     background-color: #fff;
     img {
       position: absolute;
@@ -293,15 +323,12 @@ export default {
   }
 }
 .content {
-  // flex: 1;
-  -webkit-box-flex: 1;
-  // height: 100%;
   padding: 0.42rem 0.35rem 0;
   box-sizing: border-box;
   font-size: 0.3rem;
   overflow-y: auto;
-//  min-height:101%;
-  // margin-bottom: 4.11rem;
+  position: fixed;
+  top: 1.54rem;
   -webkit-overflow-scrolling: touch;
   .chat-wrap {
     .chat-msg-wrap {
@@ -359,14 +386,12 @@ export default {
         border-bottom-left-radius: 0.15rem 0.15rem;
       }
     }
-
- 
   }
 }
 .footer-wrap {
   background-color: #f6f6f6;
   min-height: 1.11rem;
-  // transition: all .3s ease; 
+  // transition: all .3s ease;
   .footer-content {
     position: fixed;
     width: 100%;
@@ -375,7 +400,6 @@ export default {
   .footer {
     background-color: #f6f6f6;
     height: 1.11rem;
-
     font-size: 0.36rem;
     padding: 0.16rem 0.31rem;
     padding-right: 0;
@@ -424,6 +448,7 @@ export default {
     flex-wrap: wrap;
     overflow: auto;
     height: 3rem;
+    background-color: #f6f6f6;
     .exps-item {
       // border: 1px solid red;
       box-sizing: border-box;

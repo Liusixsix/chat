@@ -25,9 +25,9 @@ export function get(url, params){
     })    
 });}
 
-export function post(url,params,config={}) {
+export function post(url,params) {
     return new Promise((resolve,reject)=>{
-        axios.post(url,stringify(params),config).then(res=>{
+        axios.post(url,stringify(params)).then(res=>{
             resolve(res.data)
         }).catch(err=>{
             reject(err)
@@ -43,5 +43,10 @@ export default {
      Upload(prams,config){
          console.log(config)
         return post('https://upload.qiniup.com',prams,config)
-     }
+     },
+
+    //  发送消息
+    sendNews(prams){
+        return post('chat/shuiyu/chatNews/sendNews',parms)
+    }
 }

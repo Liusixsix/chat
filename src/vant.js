@@ -1,5 +1,5 @@
 import Vue from 'vue';
-import { Toast,Field,Button,PullRefresh,NoticeBar,Uploader,ImagePreview    } from 'vant';
+import { Toast,Field,Button,PullRefresh,NoticeBar,Uploader,ImagePreview,Loading } from 'vant';
 
 import 'vant/lib/index.css';
 
@@ -10,3 +10,4 @@ Vue.use(PullRefresh);
 Vue.use(NoticeBar);
 Vue.use(Uploader);
 Vue.use(ImagePreview)
+Vue.use(Loading)

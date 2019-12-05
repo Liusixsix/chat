@@ -7,18 +7,22 @@
           <div class="chat-avantar">
             <img src="../assets/img/female.jpg" alt />
           </div>
-             <!-- Exp表情  Other背景   img-wrap图片-->
-          <div class="chat-msg Other " v-html="message.content"></div>
-            <tips></tips>
+          <!-- Exp表情  Other背景   img-wrap图片-->
+          <div class="chat-msg Other" v-hammer:press="()=>press(message.content)">
+            {{message.content}}
+            <!-- <tips ></tips> -->
+          </div>
         </div>
       </div>
 
       <!-- 我的消息 -->
       <div v-else-if="message.type===2" class="news">
         <div class="my-chat-msg">
-              <tips></tips>
-            <!-- Exp表情  Other背景   img-wrap图片-->
-          <div class="chat-msg  My " v-html="message.content"></div>
+          <!-- Exp表情  Other背景   img-wrap图片-->
+          <div class="chat-msg My" v-hammer:press="()=>press(index)">
+            {{message.content}}
+            <tips :index='tipShowIndex' :id='index' :content='message.content'></tips>
+          </div>
           <div class="chat-avantar">
             <img src="../assets/img/female.jpg" alt />
           </div>
@@ -50,6 +54,8 @@
 
 <script>
 import tips from "./tips";
+import AnyTouch from "any-touch";
+
 export default {
   components: {
     tips
@@ -63,17 +69,25 @@ export default {
   data() {
     return {
       show: false,
+      tipShowIndex:-1,
       images: []
     };
   },
   methods: {
-    press() {},
+    press(i) {
+      this.tipShowIndex = i
+      this.$toast(i);
+    },
+    importAT(at) {
+      at.set({ isPreventDefault: false });
+    },
     onChange() {},
     showImg(msg) {
       this.images = [msg.content];
       this.show = true;
     }
-  }
+  },
+  mounted() {}
 };
 </script>
 
@@ -82,9 +96,7 @@ export default {
 .li {
   margin-bottom: 0.3rem;
 }
-.news{
-  
-}
+
 // 对面的消息
 .Customer-chat-msg {
   display: flex;
@@ -105,6 +117,14 @@ export default {
     max-width: 65%;
     word-break: break-all;
     line-height: 1.3em;
+    position: relative;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
     // -webkit-touch-callout: none;
   }
   .Other {
@@ -124,7 +144,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  position: relative;
+
   .chat-avantar {
     width: 0.72rem;
     height: 0.72rem;
@@ -141,7 +161,7 @@ export default {
     max-width: 65%;
     word-break: break-all;
     line-height: 1.3em;
-    
+    position: relative;
     // -webkit-touch-callout: none;
   }
   .My {
@@ -160,11 +180,11 @@ export default {
       height: 0.5rem;
     }
   }
-  .img-wrap{
-      max-width: 30%;
-      img{
-          max-width: 100%;
-      }
+  .img-wrap {
+    max-width: 30%;
+    img {
+      max-width: 100%;
+    }
   }
 }
 
