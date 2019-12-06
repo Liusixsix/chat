@@ -9,6 +9,15 @@ module.exports = {
         disableHostCheck: true,
         https: false, // https:{type:Boolean}
         open: false, //配置自动启动浏览器
-        proxy:null  //设置代理
+        proxy:{
+            '/api':{
+                target: 'http://47.96.112.218:8021/',
+                ws: true,
+                changOrigin: true,
+                pathRewrite: {
+                  '^/api': ''
+                }
+            }
+        }  //设置代理
     }
 }

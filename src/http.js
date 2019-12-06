@@ -1,9 +1,20 @@
 import axios from 'axios'
 import { stringify } from 'qs'
-axios.defaults.baseURL = 'http://47.96.112.218:8020/'
+const baseURL = process.env.NODE_ENV == 'development'?'/api/':'http://47.96.112.218:8020/'
+axios.defaults.baseURL = baseURL;
 axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded;charset=UTF-8';
 
+
+axios.interceptors.request.use(config=>{
+    config.headers['sign'] = 1;
+    config.headers['token'] = '31cc91d9cdc44b41b2073d73ee74c759';
+    return config
+},err=>{
+    return Promise.error(err)
+})
+
 axios.interceptors.response.use(response=>{
+    // const { code } = response.data;
     if (response.status === 200) {            
         return Promise.resolve(response.data);        
     } else {            
@@ -14,7 +25,7 @@ axios.interceptors.response.use(response=>{
 })
 
 
-export function get(url, params){    
+export function get(url, params={}){    
     return new Promise((resolve, reject) =>{        
         axios.get(url, {            
             params: params        
@@ -41,12 +52,29 @@ export default {
         return get('/chat/qiniu/getUploadToken' ,prams)
      },
      Upload(prams,config){
-         console.log(config)
         return post('https://upload.qiniup.com',prams,config)
      },
 
     //  发送消息
-    sendNews(prams){
-        return post('chat/shuiyu/chatNews/sendNews',parms)
+    sendNews(params){
+        return post('chat/shuiyu/chatNews/sendNews',params)
+    },
+
+    // 删除某条消息
+    delNews(params){
+        return post('chat/shuiyu/chatNews/delNewsById',params)
+    },
+    // 撤回某条消息
+    withdraw(params){
+        return post('chat/shuiyu/chatNews/withdrawMessage',params)
+    },
+    // 查看消息
+    Messages(){
+        return get('chat/shuiyu/chatNews/getUnreadMessages')
+    },
+    // 查看历史消息
+    getHistory(params={}){
+        return get('/chat/shuiyu/chatNews/getHistoryNewsByUserId' ,params)
     }
+
 }

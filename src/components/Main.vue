@@ -15,7 +15,7 @@
     <div class="content" ref="xwBody" :style="{bottom:footerH+'rem'}">
       <van-pull-refresh v-model="isLoading" @refresh="onRefresh">
         <div class="chat-wrap">
-          <List :records="records"></List>
+          <List :records="filterrecords"></List>
         </div>
       </van-pull-refresh>
     </div>
@@ -32,7 +32,6 @@
               @focus="inputFocus"
               @blur="inputBlur"
             ></van-field>
-            <!-- <input type="text" v-model="value"> -->
           </div>
           <div class="footer-tool">
             <div @touchstart="showExps">
@@ -67,7 +66,9 @@ import EXPS from "../static/emojis.json";
 import axios from "axios";
 import List from "./list";
 import api from "../http";
+import { setInterval } from "timers";
 const baseURL = "https://icon.sleep365.cn/";
+// （0文字，1图片，6表情）
 export default {
   name: "mains",
   components: {
@@ -82,48 +83,7 @@ export default {
       EXPS, //表情图片列表
       isEXps: false, //表情列表是否展开
       isBtn: false, //是否显示发送按钮
-      records: [
-        // { type: 1, content: "风格啊发哇发" },
-        // { type: 2, content: "风格啊发哇发fwafw" },
-        // {
-        //   type: 1,
-        //   content: "风格啊发哇的瓦房我福娃福娃狗娃福娃福娃发发福娃福娃"
-        // },
-        { type: 1, content: "风格啊发哇发" },
-        { type: 2, content: "风格啊发哇发fwafw" },
-        // {
-        //   type: 1,
-        //   content: "风格啊发哇的瓦房我福娃福娃狗娃福娃福娃发发福娃福娃"
-        // },
-        { type: 1, content: "风格啊发哇发" },
-        { type: 2, content: "风格啊发哇发fwafw" },
-        {
-          type: 1,
-          content: "风格啊发哇的瓦房我福娃福娃狗娃福娃福娃发发福娃福娃"
-        },
-        { type: 1, content: "风格啊发哇发" },
-        { type: 2, content: "风格啊发哇发fwafw" },
-        {
-          type: 1,
-          content: "风格啊发哇的瓦房我福娃福娃狗娃福娃福娃发发福娃福娃"
-        },
-        { type: 1, content: "风格啊发哇发" },
-        { type: 2, content: "风格啊发哇发fwafw" },
-        {
-          type: 1,
-          content: "风格啊发哇的瓦房我福娃福娃狗娃福娃福娃发发福娃福娃"
-        },
-        { type: 1, content: "风格啊发哇发" },
-        {
-          type: 2,
-          content:
-            "风格啊发哇发fwa格啊发哇发fwa格啊发哇发fwa格啊发哇发fwa格啊发哇发fwa格啊发哇发fwafw"
-        },
-        {
-          type: 2,
-          content: "2"
-        }
-      ], //聊天记录
+      records: [], //聊天记录
       count: 0,
       isLoading: false
     };
@@ -150,6 +110,18 @@ export default {
       }
     }
   },
+  computed: {
+    filterrecords() {
+      return this.records.map(item => {
+        if (item.state === 4 && item.sort === 1) {
+          item.type = 21; //用户撤回
+        } else if (item.state === 4 && item.sort === 2) {
+          item.type = 20; //客服撤回
+        }
+        return item;
+      });
+    }
+  },
   methods: {
     onRefresh() {
       setTimeout(() => {
@@ -165,22 +137,18 @@ export default {
       this.scrollToBottom();
     },
     // 点击某个表情发送
-    clickEXPS(e, src) {
-      this.$toast("点击表情2222");
-      this.records.push({
-        type: 2,
-        content: `<img style='height:.5rem' src="${src}" alt />`
-      });
+    async clickEXPS(e, src) {
+      this.news(6, src);
       this.scrollToBottom();
     },
     // 输入框聚焦事件
     inputFocus() {
       this.isEXps = false;
-      setTimeout(() => {
-        let Dom = this.$refs.xwBody;
-        let h = Dom.scrollHeight;
-        Dom.scrollTop = h;
-      }, 300);
+      // setTimeout(() => {
+      //   let Dom = this.$refs.xwBody;
+      //   let h = Dom.scrollHeight;
+      //   Dom.scrollTop = h;
+      // }, 300);
     },
     // 输入框失焦事件
     inputBlur() {
@@ -191,13 +159,14 @@ export default {
       this.$refs.input.blur();
     },
     // 发送按钮
-    Sendout() {
-      this.$toast("发送按钮");
-      this.records.push({
-        type: 2,
-        content: this.value
-      });
+    async Sendout() {
+      await this.news(0, this.value);
       this.value = "";
+    },
+    // 发消息 自己往数组里追加
+    async news(type, content) {
+      let news = await api.sendNews({ type, content }).then(res => res);
+      this.records = [...this.records, news];
       setTimeout(() => {
         this.scrollToBottom();
       }, 200);
@@ -219,58 +188,65 @@ export default {
         let imgName = await axios
           .post("https://upload.qiniup.com", formdata, config)
           .then(res => res.key);
-        this.records.push({
-          type: 2,
-          content: `<img src="${baseURL + imgName}" alt />`
-          // content:`${baseURL+imgName}`
-        });
+        this.news(1, `${baseURL + imgName}`);
       } catch (err) {
         this.$toast("发送失败");
       }
-      this.scrollToBottom();
+      // this.scrollToBottom();
     },
     scrollToBottom() {
       this.$nextTick(() => {
         let Dom = this.$refs.xwBody;
-        Dom.scrollTop = Dom.scrollHeight;
+        if(Dom){
+           Dom.scrollTop = Dom.scrollHeight;
+        }
       });
     },
-    iosTrouchFn(el) {
-      console.log(el)
-      //el需要滑动的元素
-      el.addEventListener("touchmove", function(e) {
-        e.isSCROLL = true;
-      });
-      document.body.addEventListener(
-        "touchmove",
-        function(e) {
-          if (!e.isSCROLL) {
-            e.preventDefault(); //阻止默认事件(上下滑动)
-          } else {
-            //需要滑动的区域
-            var top = el.scrollTop; //对象最顶端和窗口最顶端之间的距离
-            var scrollH = el.scrollHeight; //含滚动内容的元素大小
-            var offsetH = el.offsetHeight; //网页可见区域高
-            var cScroll = top + offsetH; //当前滚动的距离
-
-            //被滑动到最上方和最下方的时候
-            if (top == 0) {
-              top = 1; //0～1之间的小数会被当成0
-            } else if (cScroll === scrollH) {
-              el.scrollTop = top - 0.1;
+    // 接收新消息
+    Messages() {
+      api.Messages().then(news => {
+        if (news.length) {
+          news.forEach(item => {
+            // 为4 撤回  2 客服的撤回
+            if (item.state === 4 && item.sort === 2) {
+              // 将列表里数据换为撤回状态
+              let index = this.records.findIndex(items => {
+                return items.id === item.id;
+              });
+              if (index >= 0) {
+                let replaceItem = this.records[index];
+                replaceItem.type = 20;
+                this.records.splice(index,1,replaceItem);
+              }
+            }else{
+              // 正常新消息 push进去
+              console.log(item)
+              this.records.push(item)
             }
-          }
-        },
-        { passive: false }
-      ); //passive防止阻止默认事件不生效
+          });
+          this.scrollToBottom();
+        }
+      });
+    },
+    // 进入页面查看历史消息
+    getHistory() {
+      return api.getHistory();
+    },
+    // 进入页面获取消息
+    async init() {
+      let res = await api.getHistory(res => res);
+      let data = await api.Messages(res => res);
+      this.records = [...res.list, ...data];
+      setTimeout(() => {
+        this.scrollToBottom();
+      }, 300);
+      setInterval(() => {
+        this.Messages();
+      }, 3000);
     }
   },
-  mounted() {
-    this.$toast("3");
-  // this.iosTrouchFn( this.$refs.xwBody)
-    setTimeout(() => {
-      this.scrollToBottom();
-    }, 500);
+  async mounted() {
+    this.init();
   }
 };
 </script>
@@ -329,6 +305,8 @@ export default {
   overflow-y: auto;
   position: fixed;
   top: 1.54rem;
+  width: 100%;
+  background: #fff;
   -webkit-overflow-scrolling: touch;
   .chat-wrap {
     .chat-msg-wrap {

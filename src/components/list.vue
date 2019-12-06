@@ -1,27 +1,65 @@
 <template>
   <ul>
     <li v-for="(message,index) of records" :key="index" class="li">
-      <!-- 对方的消息 -->
-      <div v-if="message.type===1" class="news">
+      <!-- 对方的消息 文字内容 -->
+      <div v-if="message.sort===2&&message.type===0" class="news">
         <div class="Customer-chat-msg">
           <div class="chat-avantar">
             <img src="../assets/img/female.jpg" alt />
           </div>
           <!-- Exp表情  Other背景   img-wrap图片-->
-          <div class="chat-msg Other" v-hammer:press="()=>press(message.content)">
+          <div class="chat-msg Other" v-hammer:press="()=>press(index)">
             {{message.content}}
-            <!-- <tips ></tips> -->
+            <tips :index="tipShowIndex" :id="index" :content="message.content" ref="tips"></tips>
+          </div>
+        </div>
+      </div>
+
+      <!-- 对方的消息 表情 或 图片  -->
+      <div v-if="message.sort===2&&(message.type===6||message.type===1)" class="news">
+        <div class="Customer-chat-msg">
+          <div class="chat-avantar">
+            <img src="../assets/img/female.jpg" alt />
+          </div>
+          <div
+            :class="{'Exp':message.type===6,'img-wrap':message.type===1}"
+            v-hammer:press="()=>press(index)"
+            v-hammer:tap="()=>showImg(message)"
+          >
+            <img :src="message.content" alt />
+            <tips :index="tipShowIndex" :id="index" :content="message.content" ref="tips"></tips>
           </div>
         </div>
       </div>
 
       <!-- 我的消息 -->
-      <div v-else-if="message.type===2" class="news">
+      <div v-else-if="message.sort===1&&message.type===0" class="news">
         <div class="my-chat-msg">
           <!-- Exp表情  Other背景   img-wrap图片-->
           <div class="chat-msg My" v-hammer:press="()=>press(index)">
             {{message.content}}
-            <tips :index='tipShowIndex' :id='index' :content='message.content'></tips>
+            <transition name="van-fade">
+              <tips :index="tipShowIndex" :id="index" :content="message.content" ref="tips"></tips>
+            </transition>
+          </div>
+          <div class="chat-avantar">
+            <img src="../assets/img/female.jpg" alt />
+          </div>
+        </div>
+      </div>
+
+      <!-- 我的消息 表情 或图片 -->
+      <div v-else-if="message.sort===1&&(message.type===6||message.type===1)" class="news">
+        <div class="my-chat-msg">
+          <div
+            :class="{'Exp':message.type===6,'img-wrap':message.type===1}"
+           v-hammer:tap="(e)=>showImg(e,message)" 
+            v-hammer:press="()=>press(index)"
+          >
+            <img :src="message.content" alt  >
+            <transition name="van-fade">
+              <tips :index="tipShowIndex" :id="index" :content="message.content" ref="tips"></tips>
+            </transition>
           </div>
           <div class="chat-avantar">
             <img src="../assets/img/female.jpg" alt />
@@ -30,10 +68,10 @@
       </div>
 
       <!-- 撤回消息提示 -->
-      <div v-else-if="message.type===3">
+      <div v-else-if="message.type===20 || message.type===21">
         <div class="withdraw-wrap">
-          <p class="withdraw-time">15:30</p>
-          <p class="withdraw-tips">你撤回了一条消息</p>
+          <p class="withdraw-time">{{formatDate(message.created)}}</p>
+          <p class="withdraw-tips">{{message.type===20?'客服':'你'}}撤回了一条消息</p>
         </div>
       </div>
 
@@ -54,8 +92,9 @@
 
 <script>
 import tips from "./tips";
-import AnyTouch from "any-touch";
-
+// import AnyTouch from "any-touch";
+import moment from 'moment';
+import { ImagePreview } from "vant";
 export default {
   components: {
     tips
@@ -69,25 +108,51 @@ export default {
   data() {
     return {
       show: false,
-      tipShowIndex:-1,
-      images: []
+      tipShowIndex: -1,
+      images: [],
+      flag:false
     };
   },
   methods: {
+     formatDate(val){
+            if(!val) return
+            return moment(val).format('YYYY-MM-DD')
+        },
     press(i) {
-      this.tipShowIndex = i
-      this.$toast(i);
-    },
-    importAT(at) {
-      at.set({ isPreventDefault: false });
+      this.tipShowIndex = i;
+      // this.$toast(i);
     },
     onChange() {},
-    showImg(msg) {
-      this.images = [msg.content];
-      this.show = true;
-    }
+    showImg(e,msg) {
+       console.log('img')
+      // e.preventDefault()
+      if(msg.type!==1) return
+      ImagePreview({
+        images: [msg.content],
+        showIndex: false
+      });
+    },
+    // 节流
+    throttle(func, delay) {
+      var prev = Date.now();
+      return function() {
+        var context = this;
+        var args = arguments;
+        var now = Date.now();
+        if (now - prev >= delay) {
+          func.apply(context, args);
+          prev = Date.now();
+        }
+      };
+    },
+    hideTips() {
+      this.tipShowIndex = -1;
+    },
+   
   },
-  mounted() {}
+  mounted() {
+    window.addEventListener("touchmove", this.throttle(this.hideTips, 1500));
+  }
 };
 </script>
 
@@ -174,18 +239,6 @@ export default {
     border-bottom-right-radius: 0.15rem 0.15rem;
     border-bottom-left-radius: 0.15rem 0.15rem;
   }
-
-  .Exp {
-    img {
-      height: 0.5rem;
-    }
-  }
-  .img-wrap {
-    max-width: 30%;
-    img {
-      max-width: 100%;
-    }
-  }
 }
 
 .withdraw-wrap {
@@ -195,6 +248,19 @@ export default {
   margin: 0.39rem 0;
   .withdraw-time {
     margin-bottom: 0.25rem;
+  }
+}
+.Exp {
+  position: relative;
+  img {
+    height: 0.5rem;
+  }
+}
+.img-wrap {
+  max-width: 30%;
+  position: relative;
+  img {
+    max-width: 100%;
   }
 }
 </style>
