@@ -12,12 +12,13 @@
       </div>
     </div>
 
-    <div class="content" ref="xwBody" :style="{bottom:footerH+'rem'}">
-      <van-pull-refresh v-model="isLoading" @refresh="onRefresh">
-        <div class="chat-wrap">
-          <List :records="filterrecords"></List>
-        </div>
-      </van-pull-refresh>
+    <div class="content" ref="xwBody" :style="{bottom:footerH+'rem'}" @scroll="onScroll">
+      <!-- <van-loading size="24px" vertical v-if="isLoading">查看更多...</van-loading> -->
+      <!-- <van-pull-refresh v-model="isLoading" @refresh="onRefresh"> -->
+      <div class="chat-wrap">
+        <List :records="filterrecords"></List>
+      </div>
+      <!-- </van-pull-refresh> -->
     </div>
     <div class="footer-wrap" :style="{height:footerH+'rem'}">
       <!-- 底部输入框 -->
@@ -85,7 +86,8 @@ export default {
       isBtn: false, //是否显示发送按钮
       records: [], //聊天记录
       count: 0,
-      isLoading: false
+      isLoading: false,
+      isScroll: true //滚动顶部是否还有记录
     };
   },
   watch: {
@@ -123,13 +125,6 @@ export default {
     }
   },
   methods: {
-    onRefresh() {
-      setTimeout(() => {
-        this.$toast("刷新");
-        this.isLoading = false;
-        this.count++;
-      }, 500);
-    },
     // 点击表情 是否显示表情列表
     showExps() {
       this.isEXps = !this.isEXps;
@@ -138,12 +133,18 @@ export default {
     },
     // 点击某个表情发送
     async clickEXPS(e, src) {
+      // console.log("exp");
       this.news(6, src);
       this.scrollToBottom();
     },
     // 输入框聚焦事件
     inputFocus() {
       this.isEXps = false;
+      this.$nextTick(() => {
+        let Dom = this.$refs.xwBody;
+        this.$toast(Dom.clientHeight);
+      });
+
       // setTimeout(() => {
       //   let Dom = this.$refs.xwBody;
       //   let h = Dom.scrollHeight;
@@ -197,8 +198,8 @@ export default {
     scrollToBottom() {
       this.$nextTick(() => {
         let Dom = this.$refs.xwBody;
-        if(Dom){
-           Dom.scrollTop = Dom.scrollHeight;
+        if (Dom) {
+          Dom.scrollTop = Dom.scrollHeight;
         }
       });
     },
@@ -207,7 +208,7 @@ export default {
       api.Messages().then(news => {
         if (news.length) {
           news.forEach(item => {
-            // 为4 撤回  2 客服的撤回
+            // 为4 撤回  4&&2 客服的撤回
             if (item.state === 4 && item.sort === 2) {
               // 将列表里数据换为撤回状态
               let index = this.records.findIndex(items => {
@@ -216,36 +217,98 @@ export default {
               if (index >= 0) {
                 let replaceItem = this.records[index];
                 replaceItem.type = 20;
-                this.records.splice(index,1,replaceItem);
+                this.records.splice(index, 1, replaceItem);
               }
-            }else{
-              // 正常新消息 push进去
-              console.log(item)
-              this.records.push(item)
+            } else if (item.state === 2 && item.sort === 1) {
+              // 用户删除的消息
+              let index = this.records.findIndex(items => {
+                return items.id === item.id;
+              });
+              if (index >= 0) {
+                let replaceItem = this.records[index];
+                replaceItem.type = 22;
+                this.records.splice(index, 1, replaceItem);
+              }
+            } else if (item.state === 0 && item.sort === 2) {
+              this.records.push(item);
             }
           });
           this.scrollToBottom();
         }
       });
     },
-    // 进入页面查看历史消息
+    // 用来修改数组的里状态 比如撤回删除 供子组件调用
+    changeRecods(id, type) {
+      // type 20 客服撤回 type21 用户撤回
+      const index = this.records.findIndex(item => {
+        return item.id === id;
+      });
+      let replaceItem = this.records[index];
+      replaceItem.type = type;
+      this.records.splice(index, 1, replaceItem);
+    },
+    // 删除消息
+    delMsg(id) {
+      const index = this.records.findIndex(item => {
+        return item.id === id;
+      });
+      this.records.splice(index, 1);
+    },
+    // 查看更多历史消息时调用
     getHistory() {
-      return api.getHistory();
+      return api.getHistory({ id: this.records[0].id });
     },
     // 进入页面获取消息
     async init() {
-      let res = await api.getHistory(res => res);
-      let data = await api.Messages(res => res);
+      let res = await api.getHistory();
+      let data = await api.Messages();
       this.records = [...res.list, ...data];
-      setTimeout(() => {
+      setTimeout(() => {   
         this.scrollToBottom();
       }, 300);
       setInterval(() => {
         this.Messages();
       }, 3000);
+    },
+    // 事件节流
+    throttle(func, delay) {
+      var prev = Date.now();
+      return function() {
+        var context = this;
+        var args = arguments;
+        var now = Date.now();
+        if (now - prev >= delay) {
+          func.apply(context, args);
+          prev = Date.now();
+        }
+      };
+    },
+    onScroll(e) {
+      if (e.srcElement.scrollTop === 0 && this.isScroll) {
+        // 到达顶部时的滚动高度
+        let LastScrH = e.srcElement.scrollHeight;
+        //  this.isLoading = true;
+        this.getHistory().then(res => {
+         
+          if (res.list.length) {
+            this.records = [...res.list, ...this.records];
+            this.$nextTick(() => {
+              let Dom = this.$refs.xwBody;
+              let h = Dom.scrollHeight - LastScrH;
+              Dom.scrollTop = h;
+            });
+          } else {
+            this.isScroll = false;
+          }
+        });
+      }
     }
   },
   async mounted() {
+    this.$nextTick(() => {
+      let Dom = this.$refs.xwBody;
+      this.$toast(Dom.clientHeight);
+    });
     this.init();
   }
 };
@@ -308,6 +371,9 @@ export default {
   width: 100%;
   background: #fff;
   -webkit-overflow-scrolling: touch;
+  img {
+    pointer-events: none;
+  }
   .chat-wrap {
     .chat-msg-wrap {
       display: flex;

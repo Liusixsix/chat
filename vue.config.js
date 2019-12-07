@@ -9,6 +9,7 @@ module.exports = {
         disableHostCheck: true,
         https: false, // https:{type:Boolean}
         open: false, //配置自动启动浏览器
+        hotOnly: true, // 热更新
         proxy:{
             '/api':{
                 target: 'http://47.96.112.218:8021/',

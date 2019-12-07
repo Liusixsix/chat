@@ -5,12 +5,20 @@
       <div v-if="message.sort===2&&message.type===0" class="news">
         <div class="Customer-chat-msg">
           <div class="chat-avantar">
-            <img src="../assets/img/female.jpg" alt />
+            <img src="../assets/img/kefu.png" alt />
           </div>
           <!-- Exp表情  Other背景   img-wrap图片-->
-          <div class="chat-msg Other" v-hammer:press="()=>press(index)">
+          <div class="chat-msg Other" v-hammer:press="()=>press(message.id)">
             {{message.content}}
-            <tips :index="tipShowIndex" :id="index" :content="message.content" ref="tips"></tips>
+            <tips
+              :tipShowIndex="tipShowIndex"
+              :id="message.id"
+              :userId="message.userId"
+              :content="message.content"
+              :type="message.type"
+              :sort="message.sort"
+              ref="tips"
+            ></tips>
           </div>
         </div>
       </div>
@@ -19,15 +27,24 @@
       <div v-if="message.sort===2&&(message.type===6||message.type===1)" class="news">
         <div class="Customer-chat-msg">
           <div class="chat-avantar">
-            <img src="../assets/img/female.jpg" alt />
+            <img src="../assets/img/kefu.png" alt />
           </div>
           <div
             :class="{'Exp':message.type===6,'img-wrap':message.type===1}"
-            v-hammer:press="()=>press(index)"
-            v-hammer:tap="()=>showImg(message)"
+            v-hammer:press="()=>press(message.id)"
           >
-            <img :src="message.content" alt />
-            <tips :index="tipShowIndex" :id="index" :content="message.content" ref="tips"></tips>
+            <div v-hammer:tap="(e)=>showImg(e,message)">
+              <img :src="message.content" alt />
+            </div>
+            <tips
+              :tipShowIndex="tipShowIndex"
+              :id="message.id"
+              :userId="message.userId"
+              :content="message.content"
+              :type="message.type"
+              :sort="message.sort"
+              ref="tips"
+            ></tips>
           </div>
         </div>
       </div>
@@ -36,14 +53,22 @@
       <div v-else-if="message.sort===1&&message.type===0" class="news">
         <div class="my-chat-msg">
           <!-- Exp表情  Other背景   img-wrap图片-->
-          <div class="chat-msg My" v-hammer:press="()=>press(index)">
+          <div class="chat-msg My" v-hammer:press="()=>press(message.id)">
             {{message.content}}
             <transition name="van-fade">
-              <tips :index="tipShowIndex" :id="index" :content="message.content" ref="tips"></tips>
+              <tips
+                :tipShowIndex="tipShowIndex"
+                :id="message.id"
+                :userId="message.userId"
+                :content="message.content"
+                :type="message.type"
+                :sort="message.sort"
+                ref="tips"
+              ></tips>
             </transition>
           </div>
           <div class="chat-avantar">
-            <img src="../assets/img/female.jpg" alt />
+            <img src="../assets/img/user.png" alt />
           </div>
         </div>
       </div>
@@ -53,16 +78,25 @@
         <div class="my-chat-msg">
           <div
             :class="{'Exp':message.type===6,'img-wrap':message.type===1}"
-           v-hammer:tap="(e)=>showImg(e,message)" 
-            v-hammer:press="()=>press(index)"
+            v-hammer:press="()=>press(message.id)"
           >
-            <img :src="message.content" alt  >
+            <div v-hammer:tap="(e)=>showImg(e,message)">
+              <img :src="message.content" alt />
+            </div>
             <transition name="van-fade">
-              <tips :index="tipShowIndex" :id="index" :content="message.content" ref="tips"></tips>
+              <tips
+                :tipShowIndex="tipShowIndex"
+                :id="message.id"
+                :userId="message.userId"
+                :content="message.content"
+                :type="message.type"
+                :sort="message.sort"
+                ref="tips"
+              ></tips>
             </transition>
           </div>
           <div class="chat-avantar">
-            <img src="../assets/img/female.jpg" alt />
+            <img src="../assets/img/user.png" alt />
           </div>
         </div>
       </div>
@@ -71,7 +105,7 @@
       <div v-else-if="message.type===20 || message.type===21">
         <div class="withdraw-wrap">
           <p class="withdraw-time">{{formatDate(message.created)}}</p>
-          <p class="withdraw-tips">{{message.type===20?'客服':'你'}}撤回了一条消息</p>
+          <p class="withdraw-tips">{{message.type===20?'对方':'你'}}撤回了一条消息</p>
         </div>
       </div>
 
@@ -84,8 +118,8 @@
           </div>
         </div>
       </div>
+      
     </li>
-
     <van-image-preview v-model="show" :images="images" @change="onChange"></van-image-preview>
   </ul>
 </template>
@@ -93,7 +127,7 @@
 <script>
 import tips from "./tips";
 // import AnyTouch from "any-touch";
-import moment from 'moment';
+import moment from "moment";
 import { ImagePreview } from "vant";
 export default {
   components: {
@@ -110,23 +144,20 @@ export default {
       show: false,
       tipShowIndex: -1,
       images: [],
-      flag:false
+      flag: false
     };
   },
   methods: {
-     formatDate(val){
-            if(!val) return
-            return moment(val).format('YYYY-MM-DD')
-        },
-    press(i) {
-      this.tipShowIndex = i;
-      // this.$toast(i);
+    formatDate(val) {
+      if (!val) return;
+      return moment(val).format("HH:mm:ss");
+    },
+    press(id) {
+      this.tipShowIndex = id;
     },
     onChange() {},
-    showImg(e,msg) {
-       console.log('img')
-      // e.preventDefault()
-      if(msg.type!==1) return
+    showImg(e, msg) {
+      if (msg.type !== 1) return;
       ImagePreview({
         images: [msg.content],
         showIndex: false
@@ -147,8 +178,7 @@ export default {
     },
     hideTips() {
       this.tipShowIndex = -1;
-    },
-   
+    }
   },
   mounted() {
     window.addEventListener("touchmove", this.throttle(this.hideTips, 1500));
@@ -226,6 +256,7 @@ export default {
     max-width: 65%;
     word-break: break-all;
     line-height: 1.3em;
+    color: #656565;
     position: relative;
     // -webkit-touch-callout: none;
   }
@@ -243,7 +274,7 @@ export default {
 
 .withdraw-wrap {
   color: #8c8c8c;
-  font-size: 0.26rem;
+  font-size: 0.25rem;
   text-align: center;
   margin: 0.39rem 0;
   .withdraw-time {
@@ -254,6 +285,7 @@ export default {
   position: relative;
   img {
     height: 0.5rem;
+    pointer-events: none;
   }
 }
 .img-wrap {
@@ -261,6 +293,7 @@ export default {
   position: relative;
   img {
     max-width: 100%;
+    pointer-events: none;
   }
 }
 </style>
