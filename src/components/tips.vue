@@ -6,7 +6,8 @@
         v-if="type===0"
         v-clipboard:copy="content"
         v-clipboard:success="Copy"
-        class="van-hairline--left van-hairline--right"
+        class="van-hairline--right"
+        :class="{'van-hairline--left':sort===1}"
       >复制</span>
       <span @touchstart="deletes" :class="{'van-hairline--left':(type===6||type===1)&&sort===1}">删除</span>
     </span>

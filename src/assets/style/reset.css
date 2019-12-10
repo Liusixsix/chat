@@ -33,6 +33,7 @@ body {
 	-webkit-user-select: none;
 	height: 100%;
 	overflow-x: hidden;
+	position: relative;
 	   /* overflow: hidden; */
 	/* min-height: 100vh; */
 

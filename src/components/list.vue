@@ -51,6 +51,7 @@
 
       <!-- 我的消息 -->
       <div v-else-if="message.sort===1&&message.type===0" class="news">
+        <p class="withdraw-time" v-if="showTime(index)">{{formatDate(message.created)}}</p>
         <div class="my-chat-msg">
           <!-- Exp表情  Other背景   img-wrap图片-->
           <div class="chat-msg My" v-hammer:press="()=>press(message.id)">
@@ -81,7 +82,7 @@
             v-hammer:press="()=>press(message.id)"
           >
             <div v-hammer:tap="(e)=>showImg(e,message)">
-              <img :src="message.content" alt />
+              <img :src="message.content" alt  @load="handleLoad($event,index)" />
             </div>
             <transition name="van-fade">
               <tips
@@ -118,7 +119,7 @@
           </div>
         </div>
       </div>
-      
+
     </li>
     <van-image-preview v-model="show" :images="images" @change="onChange"></van-image-preview>
   </ul>
@@ -147,7 +148,25 @@ export default {
       flag: false
     };
   },
+  computed: {},
   methods: {
+    showTime(index) {
+      if (index) {
+        if (
+          this.records[index].created - this.records[index - 1].created >=
+          500000
+        ) {
+          return true;
+        } else {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    },
+    handleLoad(e, index) {
+     
+    },
     formatDate(val) {
       if (!val) return;
       return moment(val).format("HH:mm:ss");
@@ -233,7 +252,13 @@ export default {
     border-bottom-left-radius: 0.15rem 0.15rem;
   }
 }
-
+.withdraw-time {
+  text-align: center;
+  color: #8c8c8c;
+  font-size: 0.25rem;
+  text-align: center;
+  margin: 0.39rem 0;
+}
 // 我发的消息
 .my-chat-msg {
   display: flex;
@@ -293,6 +318,7 @@ export default {
   position: relative;
   img {
     max-width: 100%;
+    max-height: 100%;
     pointer-events: none;
   }
 }

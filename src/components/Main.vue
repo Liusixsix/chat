@@ -1,16 +1,10 @@
 <template>
   <div class="App">
-    <div class="header">
-      <div class="header-content">
-        <div class="header-top">
-          <img src="../assets/img/back.png" alt />
-          <span>咨询聊天</span>
-        </div>
-        <div class="header-bottom">
-          <marquee class="marquee">客服热线 ：4005678456</marquee>
-        </div>
+    <!-- <div class="header">
+      <div class="header-bottom">
+        <marquee class="marquee">客服热线 ：4005678456</marquee>
       </div>
-    </div>
+    </div>-->
 
     <div class="content" ref="xwBody" :style="{bottom:footerH+'rem'}" @scroll="onScroll">
       <!-- <van-loading size="24px" vertical v-if="isLoading">查看更多...</van-loading> -->
@@ -20,44 +14,43 @@
       </div>
       <!-- </van-pull-refresh> -->
     </div>
-    <div class="footer-wrap" :style="{height:footerH+'rem'}">
+    <div class="footer-wrap" :style="{height:footerH+'rem'}" ref="footer">
       <!-- 底部输入框 -->
-      <div class="footer-content">
-        <div class="footer">
-          <div class="input-wrap">
-            <van-field
-              type="text"
-              ref="input"
-              v-model="value"
-              placeholder
-              @focus="inputFocus"
-              @blur="inputBlur"
-            ></van-field>
-          </div>
-          <div class="footer-tool">
-            <div @touchstart="showExps">
-              <img v-show="!isEXps" src="../assets/img/Expression.png" alt />
-              <img v-show="isEXps" src="../assets/img/consulting_keyboard.png" alt />
-            </div>
-            <div>
-              <van-uploader v-show="!isBtn" :after-read="afterRead">
-                <img src="../assets/img/More.png" alt />
-              </van-uploader>
 
-              <van-button v-show="isBtn" size="mini" class="Send-btn" @click="Sendout">发送</van-button>
-            </div>
+      <div class="footer">
+        <div class="input-wrap">
+          <van-field
+            type="text"
+            ref="input"
+            v-model="value"
+            placeholder
+            @focus="inputFocus"
+            @blur="inputBlur"
+          ></van-field>
+        </div>
+        <div class="footer-tool">
+          <div @touchstart="showExps">
+            <img v-show="!isEXps" src="../assets/img/Expression.png" alt />
+            <img v-show="isEXps" src="../assets/img/consulting_keyboard.png" alt />
+          </div>
+          <div>
+            <van-uploader v-show="!isBtn" :after-read="afterRead" accept="image/*">
+              <img src="../assets/img/More.png" alt />
+            </van-uploader>
+
+            <van-button v-show="isBtn" size="mini" class="Send-btn" @click="Sendout">发送</van-button>
           </div>
         </div>
-
-        <!-- 表情 -->
-        <!-- <transition name="slide-fade"> -->
-        <ul class="EXPS-wrap" v-show="isEXps">
-          <li v-for="(item,index) in EXPS" :key="index" class="exps-item">
-            <img :src="item.url" alt @click="clickEXPS($event,item.url)" />
-          </li>
-        </ul>
-        <!-- </transition> -->
       </div>
+
+      <!-- 表情 -->
+      <!-- <transition name="slide-fade"> -->
+      <ul class="EXPS-wrap" v-show="isEXps">
+        <li v-for="(item,index) in EXPS" :key="index" class="exps-item">
+          <img :src="item.url" alt @click="clickEXPS($event,item.url)" />
+        </li>
+      </ul>
+      <!-- </transition> -->
     </div>
   </div>
 </template>
@@ -67,6 +60,10 @@ import EXPS from "../static/emojis.json";
 import axios from "axios";
 import List from "./list";
 import api from "../http";
+import moment from "moment";
+import { Toast } from "vant";
+import Exif from "exif-js";
+
 import { setInterval } from "timers";
 const baseURL = "https://icon.sleep365.cn/";
 // （0文字，1图片，6表情）
@@ -87,7 +84,8 @@ export default {
       records: [], //聊天记录
       count: 0,
       isLoading: false,
-      isScroll: true //滚动顶部是否还有记录
+      isScroll: true, //滚动顶部是否还有记录
+      timer: null // 定时器
     };
   },
   watch: {
@@ -141,8 +139,11 @@ export default {
     inputFocus() {
       this.isEXps = false;
       this.$nextTick(() => {
-        let Dom = this.$refs.xwBody;
-        this.$toast(Dom.clientHeight);
+        setTimeout(() => {
+          // this.$refs.input.scrollIntoView(true)
+        }, 200);
+        //  document.activeElement.scrollIntoViewIfNeeded()
+        // this.$toast(Dom.clientHeight);
       });
 
       // setTimeout(() => {
@@ -153,7 +154,7 @@ export default {
     },
     // 输入框失焦事件
     inputBlur() {
-      this.$toast("失去焦点");
+      // this.$toast("失去焦点");
     },
     //主动让input失去焦点 消除键盘
     setIpuBlur() {
@@ -161,6 +162,7 @@ export default {
     },
     // 发送按钮
     async Sendout() {
+      if (!this.value.trim()) return;
       await this.news(0, this.value);
       this.value = "";
     },
@@ -174,23 +176,60 @@ export default {
     },
     // 上传图片
     async afterRead(file) {
+      // const or = await this.getImageTag(file.file, "Orientation");
+      // if (or) {   
+      //     const self = this;
+      //   // 使用FileReader读取文件流，file为上传的文件流
+      //   const reader = new FileReader();
+      //   reader.readAsDataURL(file.file);
+      //   /* eslint-disable func-names */
+      //   // 箭头函数会改变this，所以这里不能用肩头函数
+      //   reader.onloadend = function() {
+      //     // this.result就是转化后的结果
+      //     const result = this.result;
+      //     // 将base64添加到图片标签上
+      //     const img = new Image();
+      //     img.src = result;
+        
+      //     img.onload = function() {
+      //       // 获取旋转后的图片
+          
+      //       const data = self.getRotateImg(img, or);
+      //         console.log(data)
+      //       // 如果上传接口不支持base64，则这里需要将base64转为文档流
+      //       const f = self.dataURLtoFile(data);
+      //       // 调用接口，上传图片
+      //       console.log(f);
+      //     };
+      //   };
+      // }
+
       const { name: fileName } = file.file;
+      let prefix = moment(file.lastModified)
+        .format("HHmmss")
+        .toString();
+      let newfileName = prefix + fileName;
       const config = {
         headers: { "Content-Type": "multipart/form-data" }
       };
       const formdata = new FormData();
       formdata.append("file", file.file);
-      formdata.append("key", fileName);
+      formdata.append("key", newfileName);
       try {
         let uploadToken = await api
-          .getUploadToken({ fileName })
+          .getUploadToken({ fileName: newfileName })
           .then(res => res.uploadToken);
         formdata.append("token", uploadToken);
+        Toast.loading({
+          message: "发送中...",
+          forbidClick: true
+        });
         let imgName = await axios
           .post("https://upload.qiniup.com", formdata, config)
           .then(res => res.key);
         this.news(1, `${baseURL + imgName}`);
       } catch (err) {
+        console.log(err);
         this.$toast("发送失败");
       }
       // this.scrollToBottom();
@@ -263,9 +302,10 @@ export default {
       let res = await api.getHistory();
       let data = await api.Messages();
       this.records = [...res.list, ...data];
-      setTimeout(() => {   
+      // console.log(document.readyState);
+      setTimeout(() => {
         this.scrollToBottom();
-      }, 300);
+      }, 500);
       setInterval(() => {
         this.Messages();
       }, 3000);
@@ -287,28 +327,118 @@ export default {
       if (e.srcElement.scrollTop === 0 && this.isScroll) {
         // 到达顶部时的滚动高度
         let LastScrH = e.srcElement.scrollHeight;
-        //  this.isLoading = true;
+        this.isLoading = false;
         this.getHistory().then(res => {
-         
           if (res.list.length) {
             this.records = [...res.list, ...this.records];
             this.$nextTick(() => {
               let Dom = this.$refs.xwBody;
               let h = Dom.scrollHeight - LastScrH;
               Dom.scrollTop = h;
+              setTimeout(() => {
+                this.isLoading = true;
+              }, 200);
             });
           } else {
             this.isScroll = false;
           }
         });
       }
+    },
+    getImageTag(file, tag) {
+      if (!file) return 0;
+      return new Promise((resolve, reject) => {
+        Exif.getData(file, function() {
+          const o = Exif.getTag(this, tag);
+          resolve(o);
+        });
+      });
+    },
+    getRotateImg(img, or) {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      // 图片原始大小
+      const width = img.width;
+      const height = img.height;
+      canvas.width = width;
+      canvas.height = height;
+      ctx.drawImage(img, 0, 0, width, height);
+      switch (or) {
+        case 6: // 顺时针旋转90度
+           this.rotateImg(img, "right", canvas);
+          break;
+        case 8: // 逆时针旋转90度
+          this.rotateImg(img, "left", canvas);
+          break;
+        case 3: // 顺时针旋转180度
+          this.rotateImg(img, "right", canvas, 2);
+          break;
+        default:
+          break;
+      }
+    },
+    rotateImg(img, dir = "right", canvas, s = 1) {
+      const MIN_STEP = 0;
+      const MAX_STEP = 3;
+
+      const width = canvas.width || img.width;
+      const height = canvas.height || img.height;
+      let step = 0;
+
+      if (dir === "right") {
+        step += s;
+        step > MAX_STEP && (step = MIN_STEP);
+      } else {
+        step -= s;
+        step < MIN_STEP && (step = MAX_STEP);
+      }
+
+      const degree = (step * 90 * Math.PI) / 180;
+      const ctx = canvas.getContext("2d");
+
+      switch (step) {
+        case 1:
+          canvas.width = height;
+          canvas.height = width;
+          ctx.rotate(degree);
+          ctx.drawImage(img, 0, -height, width, height);
+          break;
+        case 2:
+          canvas.width = width;
+          canvas.height = height;
+          ctx.rotate(degree);
+          ctx.drawImage(img, -width, -height, width, height);
+          break;
+        case 3:
+          canvas.width = height;
+          canvas.height = width;
+          ctx.rotate(degree);
+          ctx.drawImage(img, -width, 0, width, height);
+          break;
+        default:
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0, width, height);
+          break;
+      }
+    },
+    dataURLtoFile(dataUrl) {
+      const filename = `img${Date.now()}`;
+      const arr = dataUrl.split(",");
+      const mime = arr[0].match(/:(.*?);/)[1];
+      const bstr = atob(arr[1]);
+      let n = bstr.length;
+      const u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new File([u8arr], filename, { type: mime });
     }
   },
+
+  created() {},
   async mounted() {
-    this.$nextTick(() => {
-      let Dom = this.$refs.xwBody;
-      this.$toast(Dom.clientHeight);
-    });
+    this.$nextTick(() => {});
     this.init();
   }
 };
@@ -324,40 +454,29 @@ export default {
   height: 100%;
   width: 100%;
   overflow-x: hidden;
+  // position: relative;
+  // min-height: 100vh;
 }
 .header {
-  font-size: 0.36rem;
+  // font-size: 0.36rem;
   text-align: center;
-  // height: 1.54rem;
-  .header-content {
-    height: 1.54rem;
-    position: fixed;
-    top: 0;
-    width: 100%;
-    z-index: 9;
-  }
-  .header-top {
-    height: 0.88rem;
-    line-height: 0.88rem;
-    box-shadow: 0px 3px 13px 0px rgba(212, 229, 255, 0.21);
-    color: #333333;
-    position: relative;
-    z-index: 9;
-    background-color: #fff;
-    img {
-      position: absolute;
-      left: 0.3rem;
-      width: 0.46rem;
-      height: 0.32rem;
-      top: 0.28rem;
-    }
-  }
+  // position: absolute;
+  position: fixed;
+  // position: absolute;
+  top: 0;
+  width: 100%;
+  height: 0.8rem;
   .header-bottom {
     background-color: rgb(221, 125, 51);
-    padding: 0.18rem 0;
+    // background: red;
+    // padding: 0.18rem 0;
     color: #fff;
+    height: 0.8rem;
+    box-sizing: border-box;
+    line-height: 0.8rem;
     .marquee {
       font-size: 0.3rem;
+      color: #fff;
     }
   }
 }
@@ -367,7 +486,9 @@ export default {
   font-size: 0.3rem;
   overflow-y: auto;
   position: fixed;
-  top: 1.54rem;
+  // position: absolute;
+  // top: 0.8rem;
+  top: 0;
   width: 100%;
   background: #fff;
   -webkit-overflow-scrolling: touch;
@@ -435,12 +556,9 @@ export default {
 .footer-wrap {
   background-color: #f6f6f6;
   min-height: 1.11rem;
-  // transition: all .3s ease;
-  .footer-content {
-    position: fixed;
-    width: 100%;
-    bottom: 0;
-  }
+  position: fixed;
+  width: 100%;
+  bottom: 0;
   .footer {
     background-color: #f6f6f6;
     height: 1.11rem;
@@ -452,7 +570,7 @@ export default {
     .input-wrap {
       height: 100%;
       width: 73%;
-      position: relative;
+      // position: relative;
       .van-field {
         height: 100%;
         width: 100%;
@@ -465,7 +583,6 @@ export default {
       // justify-content: center;
       & > div {
         width: 0.55rem;
-
         img {
           width: 0.55rem;
         }
@@ -478,10 +595,11 @@ export default {
         text-align: center;
       }
       .Send-btn {
-        height: 0.54rem;
+        height: 0.58rem;
+        line-height: 0.58rem;
         background-color: #5b8aff;
         color: #fff;
-        border-radius: 0.15rem;
+        border-radius: 0.1rem;
         font-size: 0.25rem;
         // line-height: .54rem;
       }

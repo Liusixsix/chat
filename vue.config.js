@@ -1,5 +1,6 @@
 module.exports = {
     lintOnSave: false, //
+    publicPath:'./',
     chainWebpack: config => {
         config.output.filename('[name].[hash].js').end();
       },
@@ -12,6 +13,7 @@ module.exports = {
         hotOnly: true, // 热更新
         proxy:{
             '/api':{
+                // target: 'http://192.168.0.42:8021/',
                 target: 'http://47.96.112.218:8021/',
                 ws: true,
                 changOrigin: true,
