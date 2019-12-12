@@ -51,6 +51,7 @@
         </li>
       </ul>
       <!-- </transition> -->
+      <!-- <div id="k" class="kschatphone_popup_footer"  style="border: 0px; height: 60px;"></div> -->
     </div>
   </div>
 </template>
@@ -63,9 +64,11 @@ import api from "../http";
 import moment from "moment";
 import { Toast } from "vant";
 import Exif from "exif-js";
-
 import { setInterval } from "timers";
+import { async } from "q";
 const baseURL = "https://icon.sleep365.cn/";
+let timer = null;
+let interval = null;
 // （0文字，1图片，6表情）
 export default {
   name: "mains",
@@ -85,12 +88,20 @@ export default {
       count: 0,
       isLoading: false,
       isScroll: true, //滚动顶部是否还有记录
-      timer: null // 定时器
+      timer: null, // 定时器
+      isFor: true,// 是否接着循环
+      bfscrolltop:null
     };
   },
   watch: {
     value: {
       handler: function(newval) {
+        var u = navigator.userAgent;
+        var isAndroid = u.indexOf("Android") > -1 || u.indexOf("Adr") > -1; //android终端
+        if (isAndroid) {
+          this.isBtn = true;
+          return;
+        }
         if (newval.trim()) {
           this.isBtn = true;
         } else {
@@ -137,24 +148,19 @@ export default {
     },
     // 输入框聚焦事件
     inputFocus() {
+      console.log("foucus");
       this.isEXps = false;
-      this.$nextTick(() => {
-        setTimeout(() => {
-          // this.$refs.input.scrollIntoView(true)
-        }, 200);
-        //  document.activeElement.scrollIntoViewIfNeeded()
-        // this.$toast(Dom.clientHeight);
-      });
-
-      // setTimeout(() => {
-      //   let Dom = this.$refs.xwBody;
-      //   let h = Dom.scrollHeight;
-      //   Dom.scrollTop = h;
-      // }, 300);
+     
     },
     // 输入框失焦事件
     inputBlur() {
-      // this.$toast("失去焦点");
+        //  clearInterval(interval);//清除计时器
+        // document.body.scrollTop = bfscrolltop;将
+      // document.getElementsByTagName('body')[0].style.height = window.innerHeight + 'px';
+    },
+    inputStart() {
+      console.log("start");
+      // document.body.scrollTop = document.body.scrollHeight;
     },
     //主动让input失去焦点 消除键盘
     setIpuBlur() {
@@ -176,34 +182,6 @@ export default {
     },
     // 上传图片
     async afterRead(file) {
-      // const or = await this.getImageTag(file.file, "Orientation");
-      // if (or) {   
-      //     const self = this;
-      //   // 使用FileReader读取文件流，file为上传的文件流
-      //   const reader = new FileReader();
-      //   reader.readAsDataURL(file.file);
-      //   /* eslint-disable func-names */
-      //   // 箭头函数会改变this，所以这里不能用肩头函数
-      //   reader.onloadend = function() {
-      //     // this.result就是转化后的结果
-      //     const result = this.result;
-      //     // 将base64添加到图片标签上
-      //     const img = new Image();
-      //     img.src = result;
-        
-      //     img.onload = function() {
-      //       // 获取旋转后的图片
-          
-      //       const data = self.getRotateImg(img, or);
-      //         console.log(data)
-      //       // 如果上传接口不支持base64，则这里需要将base64转为文档流
-      //       const f = self.dataURLtoFile(data);
-      //       // 调用接口，上传图片
-      //       console.log(f);
-      //     };
-      //   };
-      // }
-
       const { name: fileName } = file.file;
       let prefix = moment(file.lastModified)
         .format("HHmmss")
@@ -212,26 +190,85 @@ export default {
       const config = {
         headers: { "Content-Type": "multipart/form-data" }
       };
-      const formdata = new FormData();
-      formdata.append("file", file.file);
-      formdata.append("key", newfileName);
-      try {
-        let uploadToken = await api
-          .getUploadToken({ fileName: newfileName })
-          .then(res => res.uploadToken);
-        formdata.append("token", uploadToken);
-        Toast.loading({
-          message: "发送中...",
-          forbidClick: true
-        });
-        let imgName = await axios
-          .post("https://upload.qiniup.com", formdata, config)
-          .then(res => res.key);
-        this.news(1, `${baseURL + imgName}`);
-      } catch (err) {
-        console.log(err);
-        this.$toast("发送失败");
+
+      let Orientation;
+      let self = this;
+      //去获取拍照时的信息，解决拍出来的照片旋转问题
+      Exif.getData(file.file, function() {
+        Orientation = Exif.getTag(this, "Orientation");
+      });
+
+      // 看支持不支持FileReader
+      if (!file || !window.FileReader) return;
+      if (/^image/.test(file.file.type)) {
+        // 创建一个reader
+        let reader = new FileReader();
+        // 将图片2将转成 base64 格式
+        reader.readAsDataURL(file.file);
+        // 读取成功后的回调
+        reader.onloadend = async function() {
+          let result = this.result;
+          let img = new Image();
+          img.src = result;
+          // 大于500k 压缩
+          if (result.length <= 500 * 1024) {
+            // console.log('未压缩')
+            const formdata = new FormData();
+            formdata.append("file", file.file);
+            formdata.append("key", newfileName);
+            // console.log(data);
+            try {
+              let uploadToken = await api
+                .getUploadToken({ fileName: newfileName })
+                .then(res => res.uploadToken);
+              formdata.append("token", uploadToken);
+              Toast.loading({
+                duration: 0,
+                message: "发送中...",
+                forbidClick: true
+              });
+              let imgName = await axios
+                .post("https://upload.qiniup.com", formdata, config)
+                .then(res => res.key);
+              self.news(1, `${baseURL + imgName}`);
+              Toast.clear();
+            } catch (err) {
+              Toast.clear();
+              self.$toast("发送失败");
+            }
+          } else {
+            img.onload = async function() {
+              // console.log('压缩')
+              let data = self.compress(img, Orientation);
+              const formdata = new FormData();
+              let files = self.dataURLtoFile(data, fileName);
+              formdata.append("file", files);
+              formdata.append("key", newfileName);
+              // console.log(data);
+              try {
+                let uploadToken = await api
+                  .getUploadToken({ fileName: newfileName })
+                  .then(res => res.uploadToken);
+                formdata.append("token", uploadToken);
+                Toast.loading({
+                  duration: 0,
+                  message: "发送中...",
+                  forbidClick: true
+                });
+                let imgName = await axios
+                  .post("https://upload.qiniup.com", formdata, config)
+                  .then(res => res.key);
+                self.news(1, `${baseURL + imgName}`);
+                Toast.clear();
+              } catch (err) {
+                Toast.clear();
+                self.$toast("发送失败");
+              }
+            };
+          }
+        };
       }
+
       // this.scrollToBottom();
     },
     scrollToBottom() {
@@ -244,7 +281,9 @@ export default {
     },
     // 接收新消息
     Messages() {
+      this.isFor = false;
       api.Messages().then(news => {
+        this.isFor = true;
         if (news.length) {
           news.forEach(item => {
             // 为4 撤回  4&&2 客服的撤回
@@ -306,8 +345,10 @@ export default {
       setTimeout(() => {
         this.scrollToBottom();
       }, 500);
-      setInterval(() => {
-        this.Messages();
+      timer = setInterval(() => {
+        if (this.isFor) {
+          this.Messages();
+        }
       }, 3000);
     },
     // 事件节流
@@ -323,11 +364,17 @@ export default {
         }
       };
     },
+    // 滚动事件 加载更多
     onScroll(e) {
       if (e.srcElement.scrollTop === 0 && this.isScroll) {
         // 到达顶部时的滚动高度
         let LastScrH = e.srcElement.scrollHeight;
         this.isLoading = false;
+        Toast.loading({
+          duration: 0,
+          message: "加载更多中...",
+          forbidClick: true
+        });
         this.getHistory().then(res => {
           if (res.list.length) {
             this.records = [...res.list, ...this.records];
@@ -335,111 +382,163 @@ export default {
               let Dom = this.$refs.xwBody;
               let h = Dom.scrollHeight - LastScrH;
               Dom.scrollTop = h;
+              Toast.clear();
               setTimeout(() => {
                 this.isLoading = true;
               }, 200);
             });
           } else {
             this.isScroll = false;
+            Toast.clear();
           }
         });
       }
     },
-    getImageTag(file, tag) {
-      if (!file) return 0;
-      return new Promise((resolve, reject) => {
-        Exif.getData(file, function() {
-          const o = Exif.getTag(this, tag);
-          resolve(o);
-        });
-      });
+    dataURLtoFile(dataurl, filename) {
+      // 将base64转换为file文件
+      let arr = dataurl.split(",");
+      let mime = arr[0].match(/:(.*?);/)[1];
+      let bstr = atob(arr[1]);
+      let n = bstr.length;
+      let u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      return new File([u8arr], filename, { type: mime });
     },
-    getRotateImg(img, or) {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-      // 图片原始大小
-      const width = img.width;
-      const height = img.height;
+    // 压缩图片
+    compress(img, Orientation) {
+      let canvas = document.createElement("canvas");
+      let ctx = canvas.getContext("2d");
+      //瓦片canvas
+      let tCanvas = document.createElement("canvas");
+      let tctx = tCanvas.getContext("2d");
+      // let initSize = img.src.length;
+      let width = img.width;
+      let height = img.height;
+      //如果图片大于四百万像素，计算压缩比并将大小压至400万以下
+      let ratio;
+      if ((ratio = (width * height) / 6000000) > 1) {
+        // console.log("大于400万像素");
+        ratio = Math.sqrt(ratio);
+        width /= ratio;
+        height /= ratio;
+      } else {
+        ratio = 1;
+      }
       canvas.width = width;
       canvas.height = height;
-      ctx.drawImage(img, 0, 0, width, height);
-      switch (or) {
-        case 6: // 顺时针旋转90度
-           this.rotateImg(img, "right", canvas);
-          break;
-        case 8: // 逆时针旋转90度
-          this.rotateImg(img, "left", canvas);
-          break;
-        case 3: // 顺时针旋转180度
-          this.rotateImg(img, "right", canvas, 2);
-          break;
-        default:
-          break;
-      }
-    },
-    rotateImg(img, dir = "right", canvas, s = 1) {
-      const MIN_STEP = 0;
-      const MAX_STEP = 3;
-
-      const width = canvas.width || img.width;
-      const height = canvas.height || img.height;
-      let step = 0;
-
-      if (dir === "right") {
-        step += s;
-        step > MAX_STEP && (step = MIN_STEP);
+      //    铺底色
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      //如果图片像素大于100万则使用瓦片绘制
+      let count;
+      if ((count = (width * height) / 1000000) > 1) {
+        // console.log("超过100W像素");
+        count = ~~(Math.sqrt(count) + 1); //计算要分成多少块瓦片
+        //      计算每块瓦片的宽和高
+        let nw = ~~(width / count);
+        let nh = ~~(height / count);
+        tCanvas.width = nw;
+        tCanvas.height = nh;
+        for (let i = 0; i < count; i++) {
+          for (let j = 0; j < count; j++) {
+            tctx.drawImage(
+              img,
+              i * nw * ratio,
+              j * nh * ratio,
+              nw * ratio,
+              nh * ratio,
+              0,
+              0,
+              nw,
+              nh
+            );
+            ctx.drawImage(tCanvas, i * nw, j * nh, nw, nh);
+          }
+        }
       } else {
-        step -= s;
-        step < MIN_STEP && (step = MAX_STEP);
+        ctx.drawImage(img, 0, 0, width, height);
       }
-
-      const degree = (step * 90 * Math.PI) / 180;
-      const ctx = canvas.getContext("2d");
-
+      console.log(Orientation);
+      //修复ios上传图片的时候 被旋转的问题
+      if (Orientation != "" && Orientation != 1) {
+        switch (Orientation) {
+          case 6: //需要顺时针（向左）90度旋转
+            this.rotateImg(img, "left", canvas);
+            break;
+          case 8: //需要逆时针（向右）90度旋转
+            this.rotateImg(img, "right", canvas);
+            break;
+          case 3: //需要180度旋转
+            this.rotateImg(img, "right", canvas); //转两次
+            this.rotateImg(img, "right", canvas);
+            break;
+        }
+      }
+      //进行最小压缩
+      let ndata = canvas.toDataURL("image/jpeg", 0.5);
+      tCanvas.width = tCanvas.height = canvas.width = canvas.height = 0;
+      return ndata;
+    },
+    // 旋转图片
+    rotateImg(img, direction, canvas) {
+      //最小与最大旋转方向，图片旋转4次后回到原方向
+      const min_step = 0;
+      const max_step = 3;
+      if (img == null) return;
+      //img的高度和宽度不能在img元素隐藏后获取，否则会出错
+      let height = img.height;
+      let width = img.width;
+      let step = 2;
+      if (step == null) {
+        step = min_step;
+      }
+      if (direction == "right") {
+        step++;
+        //旋转到原位置，即超过最大值
+        step > max_step && (step = min_step);
+      } else {
+        step--;
+        step < min_step && (step = max_step);
+      }
+      //旋转角度以弧度值为参数
+      let degree = (step * 90 * Math.PI) / 180;
+      let ctx = canvas.getContext("2d");
       switch (step) {
+        case 0:
+          canvas.width = width;
+          canvas.height = height;
+          ctx.drawImage(img, 0, 0);
+          break;
         case 1:
           canvas.width = height;
           canvas.height = width;
           ctx.rotate(degree);
-          ctx.drawImage(img, 0, -height, width, height);
+          ctx.drawImage(img, 0, -height);
           break;
         case 2:
           canvas.width = width;
           canvas.height = height;
           ctx.rotate(degree);
-          ctx.drawImage(img, -width, -height, width, height);
+          ctx.drawImage(img, -width, -height);
           break;
         case 3:
           canvas.width = height;
           canvas.height = width;
           ctx.rotate(degree);
-          ctx.drawImage(img, -width, 0, width, height);
-          break;
-        default:
-          canvas.width = width;
-          canvas.height = height;
-          ctx.drawImage(img, 0, 0, width, height);
+          ctx.drawImage(img, -width, 0);
           break;
       }
-    },
-    dataURLtoFile(dataUrl) {
-      const filename = `img${Date.now()}`;
-      const arr = dataUrl.split(",");
-      const mime = arr[0].match(/:(.*?);/)[1];
-      const bstr = atob(arr[1]);
-      let n = bstr.length;
-      const u8arr = new Uint8Array(n);
-      while (n--) {
-        u8arr[n] = bstr.charCodeAt(n);
-      }
-      return new File([u8arr], filename, { type: mime });
     }
   },
-
-  created() {},
+  beforeDestroy() {
+    clearInterval(timer);
+  },
   async mounted() {
-    this.$nextTick(() => {});
+    // this.$toast(2)
     this.init();
+    // this.inputFocus()
   }
 };
 </script>
@@ -451,11 +550,11 @@ export default {
   // flex-direction: column;
   display: -webkit-box;
   -webkit-box-orient: vertical;
-  height: 100%;
+  // height: 100%;
   width: 100%;
   overflow-x: hidden;
-  // position: relative;
-  // min-height: 100vh;
+  position: relative;
+  height: 100vh;
 }
 .header {
   // font-size: 0.36rem;
@@ -485,7 +584,7 @@ export default {
   box-sizing: border-box;
   font-size: 0.3rem;
   overflow-y: auto;
-  position: fixed;
+  position: absolute;
   // position: absolute;
   // top: 0.8rem;
   top: 0;
@@ -556,7 +655,8 @@ export default {
 .footer-wrap {
   background-color: #f6f6f6;
   min-height: 1.11rem;
-  position: fixed;
+  // position: fixed;
+  position: absolute;
   width: 100%;
   bottom: 0;
   .footer {
@@ -620,9 +720,10 @@ export default {
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 0.08rem;
+      margin-bottom: 0.09rem;
       img {
         height: 0.5rem;
+        width: 0.5rem;
       }
     }
   }

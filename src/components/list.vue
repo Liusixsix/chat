@@ -34,7 +34,7 @@
             v-hammer:press="()=>press(message.id)"
           >
             <div v-hammer:tap="(e)=>showImg(e,message)">
-              <img :src="message.content" alt />
+              <img :src="message.content+'?imageslim'" alt />
             </div>
             <tips
               :tipShowIndex="tipShowIndex"
@@ -82,7 +82,11 @@
             v-hammer:press="()=>press(message.id)"
           >
             <div v-hammer:tap="(e)=>showImg(e,message)">
-              <img :src="message.content" alt  @load="handleLoad($event,index)" />
+              <img
+                :src="message.content+'?imageslim'"
+                alt
+                @load="index+1===records.length&&handleLoad($event,index)"
+              />
             </div>
             <transition name="van-fade">
               <tips
@@ -120,6 +124,9 @@
         </div>
       </div>
 
+      <div class="no-msg" v-else-if="message.type===2||message.type===3">
+        <p class="withdraw-tips">暂不支持显示该消息</p>
+      </div>
     </li>
     <van-image-preview v-model="show" :images="images" @change="onChange"></van-image-preview>
   </ul>
@@ -165,7 +172,9 @@ export default {
       }
     },
     handleLoad(e, index) {
-     
+      if (this.records.length <= 30) {
+        this.$parent.scrollToBottom();
+      }
     },
     formatDate(val) {
       if (!val) return;
@@ -310,16 +319,26 @@ export default {
   position: relative;
   img {
     height: 0.5rem;
+    width: 0.5rem;
     pointer-events: none;
   }
 }
 .img-wrap {
   max-width: 30%;
+  max-height: 40%;
   position: relative;
   img {
     max-width: 100%;
-    max-height: 100%;
+   max-height: 4rem;
     pointer-events: none;
+  }
+}
+.no-msg {
+  .withdraw-tips {
+    color: #8c8c8c;
+    font-size: 0.25rem;
+    text-align: center;
+    margin: 0.39rem 0;
   }
 }
 </style>
