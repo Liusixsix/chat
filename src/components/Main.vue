@@ -14,7 +14,7 @@
       </div>
       <!-- </van-pull-refresh> -->
     </div>
-    <div class="footer-wrap" :style="{height:footerH+'rem'}" ref="footer">
+    <div class="footer-wrap" id="chatfooter" :style="{height:footerH+'rem'}" ref="footer">
       <!-- 底部输入框 -->
 
       <div class="footer">
@@ -51,7 +51,12 @@
         </li>
       </ul>
       <!-- </transition> -->
-      <!-- <div id="k" class="kschatphone_popup_footer"  style="border: 0px; height: 60px;"></div> -->
+      <div
+        id="k"
+        v-show="ios11&&footerShow"
+        class="kschatphone_popup_footer"
+        style="height: 1.2rem; border: 0px;"
+      ></div>
     </div>
   </div>
 </template>
@@ -89,8 +94,9 @@ export default {
       isLoading: false,
       isScroll: true, //滚动顶部是否还有记录
       timer: null, // 定时器
-      isFor: true,// 是否接着循环
-      bfscrolltop:null
+      isFor: true, // 是否接着循环
+      footerShow: false,
+      ios11: false
     };
   },
   watch: {
@@ -146,22 +152,24 @@ export default {
       this.news(6, src);
       this.scrollToBottom();
     },
+
     // 输入框聚焦事件
     inputFocus() {
-      console.log("foucus");
       this.isEXps = false;
-     
+      if (this.ios11) {
+        this.footerShow = true;
+        this.footerH = 1.1 + 1.2;
+      }
     },
+
     // 输入框失焦事件
     inputBlur() {
-        //  clearInterval(interval);//清除计时器
-        // document.body.scrollTop = bfscrolltop;将
-      // document.getElementsByTagName('body')[0].style.height = window.innerHeight + 'px';
+      if (this.ios11) {
+        this.footerShow = true;
+        this.footerH = 1.1;
+      }
     },
-    inputStart() {
-      console.log("start");
-      // document.body.scrollTop = document.body.scrollHeight;
-    },
+   
     //主动让input失去焦点 消除键盘
     setIpuBlur() {
       this.$refs.input.blur();
@@ -530,15 +538,33 @@ export default {
           ctx.drawImage(img, -width, 0);
           break;
       }
+    },
+    uaIos11() {
+      try {
+        var ua = navigator.userAgent.toLowerCase();
+        if (ua.indexOf("like mac os x") > 0) {
+          var reg = /os [\d._]*/gi;
+          var verinfo = ua.match(reg);
+          var version = (verinfo + "")
+            .replace(/[^0-9|_.]/gi, "")
+            .replace(/_/gi, ".");
+          var arr = version.split(".");
+          if (arr[0] > 11 && arr[1] > 0) {
+            this.ios11 = false;
+          } else {
+            this.ios11 = true;
+          }
+          // alert(this.ios11)
+        }
+      } catch (err) {}
     }
   },
   beforeDestroy() {
     clearInterval(timer);
   },
   async mounted() {
-    // this.$toast(2)
+    this.uaIos11();
     this.init();
-    // this.inputFocus()
   }
 };
 </script>
@@ -553,7 +579,7 @@ export default {
   // height: 100%;
   width: 100%;
   overflow-x: hidden;
-  position: relative;
+  // position: relative;
   height: 100vh;
 }
 .header {
@@ -584,7 +610,8 @@ export default {
   box-sizing: border-box;
   font-size: 0.3rem;
   overflow-y: auto;
-  position: absolute;
+  // position: absolute;
+  position: fixed;
   // position: absolute;
   // top: 0.8rem;
   top: 0;
@@ -655,8 +682,8 @@ export default {
 .footer-wrap {
   background-color: #f6f6f6;
   min-height: 1.11rem;
-  // position: fixed;
-  position: absolute;
+  position: fixed;
+  // position: absolute;
   width: 100%;
   bottom: 0;
   .footer {

@@ -17,7 +17,7 @@ import VueClipboard from 'vue-clipboard2'
 Vue.use(VueClipboard)
 Vue.use(vTouch);
 Vue.config.productionTip = false
-var vConsole = new VConsole();
+// var vConsole = new VConsole();
 // console.log('Hello world');
 new Vue({
   router,
