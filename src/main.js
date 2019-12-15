@@ -4,7 +4,7 @@ import router from './router.js'
 import '@/assets/style/reset.css'
 import '@/utils/rem'
 import './vant.js'
-import VConsole from 'VConsole'
+// import VConsole from 'VConsole'
 import '@/utils/inobounce.min'
 // import '@/utils/directive'
 // import '@/Hammer.js'
@@ -17,8 +17,7 @@ import VueClipboard from 'vue-clipboard2'
 Vue.use(VueClipboard)
 Vue.use(vTouch);
 Vue.config.productionTip = false
-// var vConsole = new VConsole();
-// console.log('Hello world');
+
 new Vue({
   router,
   render: h => h(App),

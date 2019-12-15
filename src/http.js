@@ -13,7 +13,7 @@ if(!token){
 }
 
 
-const baseURL = process.env.NODE_ENV == 'development' ? '/api/' : 'http://47.96.112.218:8021/'
+const baseURL = process.env.NODE_ENV == 'development' ? '/api/' : 'http://47.96.112.218:8020/'
 axios.defaults.baseURL = baseURL;
 axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded;charset=UTF-8';
 axios.interceptors.request.use(config => {
@@ -24,6 +24,7 @@ axios.interceptors.request.use(config => {
 }, err => {
     return Promise.error(err)
 })
+
 
 axios.interceptors.response.use(response => {
     const { code } = response.data;
@@ -38,8 +39,9 @@ axios.interceptors.response.use(response => {
         return Promise.reject(response);
     }
 }, err => {
-    return Promise.reject(err)
+    return Promise.reject(err) 
 })
+
 
 
 export function get(url, params = {}) {

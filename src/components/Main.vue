@@ -349,7 +349,6 @@ export default {
       let res = await api.getHistory();
       let data = await api.Messages();
       this.records = [...res.list, ...data];
-      // console.log(document.readyState);
       setTimeout(() => {
         this.scrollToBottom();
       }, 500);
@@ -485,7 +484,7 @@ export default {
         }
       }
       //进行最小压缩
-      let ndata = canvas.toDataURL("image/jpeg", 0.5);
+      let ndata = canvas.toDataURL("image/jpeg", 0.65);
       tCanvas.width = tCanvas.height = canvas.width = canvas.height = 0;
       return ndata;
     },
